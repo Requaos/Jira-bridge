@@ -65,3 +65,18 @@ func getSettings() ServerSettings {
 	}
 	return settings
 }
+
+func whoTimeVars(b *bool) (jiraRSSactivityFeed string, jiraIssueWorklog string) {
+	if *b != false {
+		return "https://evolutionpayroll.atlassian.net/activity?maxResults=20&streams=issue-key+IS+", "https://evolutionpayroll.atlassian.net/rest/api/2/issue/"
+	}
+	return "", ""
+}
+
+func closemVars(b *bool, rollbaseSessionKey string) (Queryresponse, map[string]string) {
+	if *b != false {
+		query := rollbaseSelectQuery(rollbaseSessionKey, "select%20id,%20name%20from%20change_id%20order%20by%20updatedAt%20desc")
+		return query, getchangeIDsfromRollbase(rollbaseSessionKey, query)
+	}
+	return Queryresponse{}, map[string]string{}
+}

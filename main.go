@@ -58,15 +58,8 @@ func main() {
 		var ChangeIDExists bool
 		var changeidmap map[string]string
 		var val string
-		var jiraRSSactivityFeed string
-		var jiraIssueWorklog string
-		if *whotime != false {
-			jiraRSSactivityFeed = "https://evolutionpayroll.atlassian.net/activity?maxResults=20&streams=issue-key+IS+"
-			jiraIssueWorklog = "https://evolutionpayroll.atlassian.net/rest/api/2/issue/"
-		}
-		if *closem != false {
-			changeIdqueryresult := rollbaseSelectQuery(rollbaseSessionKey, "select%20id,%20name%20from%20change_id%20order%20by%20updatedAt%20desc")
-			changeidmap = getchangeIDsfromRollbase(rollbaseSessionKey, changeIdqueryresult)
+		jiraRSSactivityFeed, jiraIssueWorklog := whoTimeVars(whotime)
+		changeIdqueryresult, changeidmap := closemVars(closem, rollbaseSessionKey)
 		}
 		filtersearchstring := getFilterContents(jiraCreds, sessionCookie, httpclient, jiraFilterURL)
 		var data [][]string
@@ -118,52 +111,38 @@ func main() {
 					issueWorklog := jiraIssueWorklog + searchresp.Issues[i].Key + "/worklog"
 					workLog := getIssueWorklog(jiraCreds, sessionCookie, issueWorklog, httpclient)
 					for _, perworklog := range workLog.Worklogs {
-						var worklogdatablock billingType
-						worklogdatablock.serviceBureauStr = searchresp.Issues[i].Fields.Customfield11903.Value
-						worklogdatablock.keyStr = searchresp.Issues[i].Key
-						worklogdatablock.billStr = billable.Value
-						worklogdatablock.whoStr = perworklog.Author.Name
-						payGroups := getUserGroups(jiraCreds, sessionCookie, "https://evolutionpayroll.atlassian.net/rest/api/2/user?username="+perworklog.Author.Name+"&expand=groups", httpclient)
-						if PayGroupContains(payGroups, "ManagerConsult") {
-							worklogdatablock.rate = jiraCreds.mRate
-						} else if PayGroupContains(payGroups, "CustomProgramming") {
-							worklogdatablock.rate = jiraCreds.pRate
-						} else if PayGroupContains(payGroups, "TechProgSupport") {
-							worklogdatablock.rate = jiraCreds.tRate
-						} else {
-							worklogdatablock.rate = jiraCreds.dRate
-						}
-						worklogdatablock.timeInt = perworklog.TimeSpent
-						worklogdatablock.exp = (worklogdatablock.rate * perworklog.TimeSpentSeconds) / 3600
-						worklogdata = append(worklogdata, worklogdatablock)
+						workrate := PayGroupRateReturn(getUserGroups(jiraCreds, sessionCookie, "https://evolutionpayroll.atlassian.net/rest/api/2/user?username="+perworklog.Author.Name+"&expand=groups", httpclient), jiraCreds)
+						subexp := (workrate * perworklog.TimeSpentSeconds) / 3600
+						worklogdata = append(worklogdata, billingType{
+							serviceBureauStr: searchresp.Issues[i].Fields.Customfield11903.Value,
+							keyStr: searchresp.Issues[i].Key,
+							billStr: billable.Value,
+							whoStr: perworklog.Author.Name,
+							rate: workrate,
+							timeInt: perworklog.TimeSpent,
+							exp: subexp,
+						})
 						totalTimeSpent += perworklog.TimeSpentSeconds
-						totalDueMoneys += worklogdatablock.exp
+						totalDueMoneys += subexp
 					}
 					if len(searchresp.Issues[i].Fields.Subtasks) > 0 {
 						for _, subTask := range searchresp.Issues[i].Fields.Subtasks {
 							subTaskWorklogURL := jiraIssueWorklog + subTask.Key + "/worklog"
 							subTaskWorklog := getIssueWorklog(jiraCreds, sessionCookie, subTaskWorklogURL, httpclient)
 							for _, perWorklog := range subTaskWorklog.Worklogs {
-								var worklogdatablock billingType
-								worklogdatablock.serviceBureauStr = searchresp.Issues[i].Fields.Customfield11903.Value
-								worklogdatablock.keyStr = searchresp.Issues[i].Key
-								worklogdatablock.billStr = billable.Value
-								worklogdatablock.whoStr = perWorklog.Author.Name
-								payGroups := getUserGroups(jiraCreds, sessionCookie, "https://evolutionpayroll.atlassian.net/rest/api/2/user?username="+perWorklog.Author.Name+"&expand=groups", httpclient)
-								if PayGroupContains(payGroups, "ManagerConsult") {
-									worklogdatablock.rate = jiraCreds.mRate
-								} else if PayGroupContains(payGroups, "CustomProgramming") {
-									worklogdatablock.rate = jiraCreds.pRate
-								} else if PayGroupContains(payGroups, "TechProgSupport") {
-									worklogdatablock.rate = jiraCreds.tRate
-								} else {
-									worklogdatablock.rate = jiraCreds.dRate
-								}
-								worklogdatablock.timeInt = perWorklog.TimeSpent
-								worklogdatablock.exp = (worklogdatablock.rate * perWorklog.TimeSpentSeconds) / 3600
-								worklogdata = append(worklogdata, worklogdatablock)
+								rate := PayGroupRateReturn(getUserGroups(jiraCreds, sessionCookie, "https://evolutionpayroll.atlassian.net/rest/api/2/user?username="+perWorklog.Author.Name+"&expand=groups", httpclient), jiraCreds)
+								exp := (rate * perWorklog.TimeSpentSeconds) / 3600
+								worklogdata = append(worklogdata, billingType{
+									serviceBureauStr: searchresp.Issues[i].Fields.Customfield11903.Value,
+									keyStr: searchresp.Issues[i].Key,
+									billStr: billable.Value,
+									whoStr: perWorklog.Author.Name,
+									rate: rate,
+									timeInt: perWorklog.TimeSpent,
+									exp: exp,
+								})
 								totalTimeSpent += perWorklog.TimeSpentSeconds
-								totalDueMoneys += worklogdatablock.exp
+								totalDueMoneys += exp
 							}
 						}
 					}
@@ -175,10 +154,7 @@ func main() {
 							fmt.Println("//")
 							fmt.Println(activityhistory.Entry[u].Content.Text)
 							fmt.Println("//")
-							activitycontents := activityhistory.Entry[u].Content.Text
-							activityauthorname := activityhistory.Entry[u].Author.Name
-							var timedatablock = []string{searchresp.Issues[i].Key, activitycontents, activityauthorname}
-							timedata = append(timedata, timedatablock)
+							timedata = append(timedata, []string{searchresp.Issues[i].Key, activityhistory.Entry[u].Content.Text, activityhistory.Entry[u].Author.Name})
 						}
 					}
 
@@ -192,14 +168,14 @@ func main() {
 					} else {
 						totalTimeSpentinMinutes = time.Duration(time.Duration(totalTimeSpent) * time.Second)
 					}
-					var worklogdatablockTotal billingType
-					worklogdatablockTotal.keyStr = searchresp.Issues[i].Key
-					worklogdatablockTotal.summaryStr = searchresp.Issues[i].Fields.Summary
-					worklogdatablockTotal.exp = totalDueMoneys
-					worklogdatablockTotal.serviceBureauStr = searchresp.Issues[i].Fields.Customfield11903.Value
-					worklogdatablockTotal.timeInt = fmt.Sprintf("%13s", Round(totalTimeSpentinMinutes, time.Minute))
 					serviceBureaus = append(serviceBureaus, searchresp.Issues[i].Fields.Customfield11903.Value)
-					worklogdata = append(worklogdata, worklogdatablockTotal)
+					worklogdata = append(worklogdata, billingType{
+						keyStr: searchresp.Issues[i].Key,
+						summaryStr: searchresp.Issues[i].Fields.Summary,
+						exp: totalDueMoneys,
+						serviceBureauStr: searchresp.Issues[i].Fields.Customfield11903.Value,
+						timeInt: fmt.Sprintf("%13s", Round(totalTimeSpentinMinutes, time.Minute)),
+					})
 				}
 				fmt.Println("//")
 				fmt.Println(searchresp.Issues[i].Key)
@@ -248,10 +224,7 @@ func main() {
 						fmt.Println("Whole Field: \"" + searchresp.Issues[i].Fields.Customfield10800 + "\" and just in case there are more than one delimited by \";\" ")
 						for numbofbl := range ifmulticase {
 							fmt.Println("This is each single BL# " + ifmulticase[numbofbl])
-							selectcomposedid := "select%20id%20from%20case8%20where%20case_number_5%20=%20\""
-							selectcomposedid += ifmulticase[numbofbl]
-							selectcomposedid += "\""
-							caseid := rollbaseSelectSingleQuery(rollbaseSessionKey, selectcomposedid)
+							caseid := rollbaseSelectSingleQuery(rollbaseSessionKey, "select%20id%20from%20case8%20where%20case_number_5%20=%20\""+ifmulticase[numbofbl]+"\"")
 							fmt.Println("This is the caseId before the workflow runs:" + caseid.Rows.Cols.Col)
 							rollbaseCloseCaseWorkFlow(rollbaseSessionKey, httpclient, caseid.Rows.Cols.Col, val)
 						}
