@@ -53,6 +53,7 @@ func getFilterContents(settings ServerSettings, session string, client *http.Cli
 	resturl := jiraFilter
 	//fmt.Println(resturl)
 	req, err := http.NewRequest("GET", resturl, nil)
+	checkError("Error creating new http request during getFilterContents() call", err)
 	req.Header.Set("X-Ausername", settings.userName)
 	req.SetBasicAuth(settings.userName, settings.passWord)
 	req.Header.Set("Host", settings.serverName)

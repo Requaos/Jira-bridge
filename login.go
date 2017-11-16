@@ -86,6 +86,7 @@ func jiralogin(settings ServerSettings, client *http.Client) LoginResponse { //T
 	//fmt.Println("URL:>", url)
 	var jsonStr = []byte(`{"username":` + settings.userName + `, "password":` + settings.passWord + `}`)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
+	checkError("Error creating http request during jiralogin() call", err)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(req)
 	if err != nil {

@@ -269,11 +269,11 @@ type SearchResponse struct {
 	Total      int `json:"total"`
 }
 
-
 func getSearchContents(settings ServerSettings, session string, search string, client *http.Client, starting string, length string) SearchResponse {
 	resturl := search + length + starting
 	//fmt.Println(resturl)
 	req, err := http.NewRequest("GET", resturl, nil)
+	checkError("Error creating http request during getSearchContents() call", err)
 	req.Header.Set("Cookie", session)
 	req.Header.Set("X-Ausername", settings.userName)
 	req.SetBasicAuth(settings.userName, settings.passWord)

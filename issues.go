@@ -703,6 +703,7 @@ func getIssueContents(settings ServerSettings, session string, search string, cl
 	resturl := search
 	//fmt.Println(resturl)
 	req, err := http.NewRequest("GET", resturl, nil)
+	checkError("Error creating new http request during getIssueContents() call", err)
 	req.Header.Set("X-Ausername", settings.userName)
 	req.SetBasicAuth(settings.userName, settings.passWord)
 	req.Header.Set("Host", settings.serverName)
@@ -728,6 +729,7 @@ func getBranchIssueContents(settings ServerSettings, session string, search stri
 	resturl := search
 	//fmt.Println(resturl)
 	req, err := http.NewRequest("GET", resturl, nil)
+	checkError("Error creating new http request during getBranchIssueContents() call", err)
 	req.Header.Set("X-Ausername", settings.userName)
 	req.SetBasicAuth(settings.userName, settings.passWord)
 	req.Header.Set("Host", settings.serverName)
@@ -753,6 +755,7 @@ func getEpicIssueContents(settings ServerSettings, session string, search string
 	resturl := search
 	//fmt.Println(resturl)
 	req, err := http.NewRequest("GET", resturl, nil)
+	checkError("Error creating new http request during getEpicIssueContents() call", err)
 	req.Header.Set("X-Ausername", settings.userName)
 	req.SetBasicAuth(settings.userName, settings.passWord)
 	req.Header.Set("Host", settings.serverName)
@@ -778,6 +781,7 @@ func getIssueWorklog(settings ServerSettings, session string, search string, cli
 	resturl := search
 	//fmt.Println(resturl)
 	req, err := http.NewRequest("GET", resturl, nil)
+	checkError("Error creating new http request during getIssueWorklog() call", err)
 	req.Header.Set("X-Ausername", settings.userName)
 	req.SetBasicAuth(settings.userName, settings.passWord)
 	req.Header.Set("Host", settings.serverName)

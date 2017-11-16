@@ -104,6 +104,7 @@ func getIssueHistory(settings ServerSettings, search string, client *http.Client
 	resturl := search
 	//fmt.Println(resturl)
 	req, err := http.NewRequest("GET", resturl, nil)
+	checkError("Error creating http request during getIssueHistory() call", err)
 	req.Header.Set("X-Ausername", settings.userName)
 	req.SetBasicAuth(settings.userName, settings.passWord)
 	req.Header.Set("Host", settings.serverName)

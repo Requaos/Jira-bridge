@@ -73,10 +73,10 @@ func whoTimeVars(b *bool) (jiraRSSactivityFeed string, jiraIssueWorklog string) 
 	return "", ""
 }
 
-func closemVars(b *bool, rollbaseSessionKey string) (Queryresponse, map[string]string) {
+func closemVars(b *bool, rollbaseSessionKey string) (map[string]string) {
 	if *b != false {
 		query := rollbaseSelectQuery(rollbaseSessionKey, "select%20id,%20name%20from%20change_id%20order%20by%20updatedAt%20desc")
-		return query, getchangeIDsfromRollbase(rollbaseSessionKey, query)
+		return getchangeIDsfromRollbase(rollbaseSessionKey, query)
 	}
-	return Queryresponse{}, map[string]string{}
+	return map[string]string{}
 }

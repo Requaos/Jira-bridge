@@ -1,10 +1,10 @@
 package main
 
 import (
+	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"encoding/xml" 
 )
 
 //Queryresponse is a struct for BL selectQuery
@@ -24,7 +24,7 @@ type QuerySingleresponse struct {
 		}
 	}
 }
- 
+
 //DataField is a struct for getting names of BL objects via ID
 type DataField struct {
 	XMLName xml.Name `xml:"resp"`
@@ -56,15 +56,10 @@ type TriggerResponse struct {
 	}
 }
 
-
 func rollbaseRunTrigger(session string, client *http.Client, objname string, id string, triggerid string) TriggerResponse {
-	resturl := "https://apps.bureaulink.com/rest/api/runtrigger?sessionId="
-	resturl += session
-	resturl += "&id=" + id
-	resturl += "&triggerId="
-	resturl += triggerid
-	resturl += "&checkValidation=true"
+	resturl := fmt.Sprintf("https://apps.bureaulink.com/rest/api/runtrigger?sessionId=%s&id=%s&triggerId=%s&checkValidation=true", session, id, triggerid)
 	req, err := http.NewRequest("PUT", resturl, nil)
+	checkError("Error creating http request during runTrigger() call", err)
 	req.Header.Set("Content-Type", "application/xml")
 	res, err := client.Do(req)
 	if err != nil {
@@ -76,7 +71,7 @@ func rollbaseRunTrigger(session string, client *http.Client, objname string, id 
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(body) 
+	fmt.Println(body)
 	var y TriggerResponse
 	err = xml.Unmarshal(body, &y)
 	if err != nil {
